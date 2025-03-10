@@ -25,12 +25,14 @@ export const PromptBuilder: React.FC<PromptBuilderProps> = ({
 }) => {
   // State to track selected options
   const [subject, setSubject] = useState<string>("");
+  const [customText, setCustomText] = useState<string>("");
   const [selectedOptions, setSelectedOptions] = useState<
     Record<string, string[]>
   >({});
   const [customDetails, setCustomDetails] = useState<string>("");
 
   // Prompt categories and options
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const promptCategories: PromptCategory[] = [
     {
       id: "style",
@@ -200,6 +202,51 @@ export const PromptBuilder: React.FC<PromptBuilderProps> = ({
           label: "Close-up",
           examples: ["macro", "detailed", "portrait"],
         },
+
+        {
+          id: "shoulder",
+          label: "over the model's shoulder",
+          examples: ["", "", ""],
+        },
+        {
+          id: "Sideways",
+          label: "slightly sideways to the front",
+          examples: ["", "", ""],
+        },
+        {
+          id: "Tilt",
+          label: "slightly tilts down",
+          examples: ["", "", ""],
+        },
+        {
+          id: "upward",
+          label: "an upward shot",
+          examples: ["", "", ""],
+        },
+
+        {
+          id: "zooms in",
+          label: "camera slowly zooms in",
+          examples: ["", "", ""],
+        },
+
+        {
+          id: "circle",
+          label: "camera circles around",
+          examples: ["", "", ""],
+        },
+
+        {
+          id: "wrap",
+          label: "camera continues to wrap around",
+          examples: ["", "", ""],
+        },
+        {
+          id: "descend",
+          label: "slowly descend and hover around",
+          examples: ["", "", ""],
+        },
+
         {
           id: "wide",
           label: "Wide Shot",
@@ -251,42 +298,54 @@ export const PromptBuilder: React.FC<PromptBuilderProps> = ({
     },
   ];
 
-  // Initialize selectedOptions based on categories
   useEffect(() => {
-    const initialSelected: Record<string, string[]> = {};
-    promptCategories.forEach((category) => {
-      initialSelected[category.id] = [];
+    if (Object.keys(selectedOptions).length === 0) return;
+
+    const selectedText = Object.values(selectedOptions).flat().join(", ");
+
+    setCustomText((prev) => {
+      if (prev.trim() && selectedText.trim()) {
+        return prev + ", " + selectedText; // Append new prompt
+      }
+      return selectedText || prev; // Set new if empty
     });
-    setSelectedOptions(initialSelected);
-  }, []);
 
-  // Handle option selection/deselection
-  const handleOptionToggle = (categoryId: string, optionId: string) => {
+    // Use setTimeout to clear selection AFTER text update
+    setTimeout(() => {
+      setSelectedOptions({});
+    }, 0);
+  }, [selectedOptions]);
+
+  const handleOptionToggle = (
+    categoryId: string,
+    optionId: string,
+    label: string
+  ) => {
     setSelectedOptions((prev) => {
-      const currentSelections = [...prev[categoryId]];
       const category = promptCategories.find((c) => c.id === categoryId);
+      if (!category) return prev;
 
-      // If category allows only single selection, replace current selection
-      if (category && !category.multiSelect) {
-        return {
-          ...prev,
-          [categoryId]: [optionId],
-        };
+      const currentSelections = [...(prev[categoryId] || [])];
+
+      if (!category.multiSelect) {
+        return { ...prev, [categoryId]: [label] };
       }
 
-      // For multi-select categories, toggle the selection
-      const index = currentSelections.indexOf(optionId);
+      const index = currentSelections.indexOf(label);
       if (index === -1) {
-        currentSelections.push(optionId);
+        currentSelections.push(label);
       } else {
         currentSelections.splice(index, 1);
       }
 
-      return {
-        ...prev,
-        [categoryId]: currentSelections,
-      };
+      return { ...prev, [categoryId]: currentSelections };
     });
+  };
+
+  // Constructing the final input field text
+  const getFinalPrompt = () => {
+    const selectedText = Object.values(selectedOptions).flat().join(", ");
+    return `${customText} ${selectedText}`.trim();
   };
 
   // Generate the prompt based on selected options
@@ -396,7 +455,10 @@ export const PromptBuilder: React.FC<PromptBuilderProps> = ({
       const data = await response.json();
       onGeneratePrompt(data.prompt);
     } catch (error) {
-      console.error('Error generating prompt. Failed to enhance prompt with AI. Using basic prompt instead.', error);
+      console.error(
+        "Error generating prompt. Failed to enhance prompt with AI. Using basic prompt instead.",
+        error
+      );
       onGeneratePrompt(basePrompt);
     } finally {
       setIsGenerating(false);
@@ -434,8 +496,8 @@ export const PromptBuilder: React.FC<PromptBuilderProps> = ({
           id="subject"
           className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           placeholder="A majestic mountain, a cyberpunk cityscape, a portrait of a warrior..."
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
+          value={getFinalPrompt()}
+          onChange={(e) => setCustomText(e.target.value)}
         />
       </div>
 
@@ -459,7 +521,9 @@ export const PromptBuilder: React.FC<PromptBuilderProps> = ({
                       ? "bg-purple-600 text-white"
                       : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-purple-100 dark:hover:bg-purple-900"
                   }`}
-                  onClick={() => handleOptionToggle(category.id, option.id)}
+                  onClick={() =>
+                    handleOptionToggle(category.id, option.id, option.label)
+                  }
                 >
                   {option.label}
                 </button>
@@ -493,7 +557,7 @@ export const PromptBuilder: React.FC<PromptBuilderProps> = ({
           className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-md font-medium shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
           onClick={generatePrompt}
         >
-          {isGenerating ? 'Generating...' : 'Generate Prompt'}
+          {isGenerating ? "Generating..." : "Generate Prompt"}
         </button>
         <button
           className="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-md font-medium shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
