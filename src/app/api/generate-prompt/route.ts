@@ -1,12 +1,15 @@
-import { HfInference } from '@huggingface/inference';
-import { NextResponse } from 'next/server';
+import { HfInference } from "@huggingface/inference";
+import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   const { basePrompt } = await request.json();
 
   // Check if basePrompt is provided and is a string
-  if (!basePrompt || typeof basePrompt !== 'string') {
-    return NextResponse.json({ message: 'Base prompt must be a non-empty string' }, { status: 400 });
+  if (!basePrompt || typeof basePrompt !== "string") {
+    return NextResponse.json(
+      { message: "Base prompt must be a non-empty string" },
+      { status: 400 }
+    );
   }
 
   try {
@@ -15,7 +18,7 @@ export async function POST(request: Request) {
 
     // Use text generation with a suitable model (e.g., distilgpt2 or gpt2)
     const response = await hf.textGeneration({
-      model: 'Gustavosta/MagicPrompt-Stable-Diffusion', // Use a model optimized for image prompts
+      model: "Gustavosta/MagicPrompt-Stable-Diffusion", // Use a model optimized for image prompts
       inputs: basePrompt,
       parameters: {
         max_length: 150, // Limit to ensure concise, usable prompts
@@ -27,11 +30,14 @@ export async function POST(request: Request) {
     });
 
     // Extract and clean the generated text from the response
-    const enhancedPrompt = response.generated_text.trim().replace(/\s+/g, ' '); // Clean up extra whitespace
+    const enhancedPrompt = response.generated_text.trim().replace(/\s+/g, " "); // Clean up extra whitespace
 
     return NextResponse.json({ prompt: enhancedPrompt });
   } catch (error) {
-    console.error('Inference API error:', error);
-    return NextResponse.json({ message: 'Error generating prompt' }, { status: 500 });
+    console.error("Inference API error:", error);
+    return NextResponse.json(
+      { message: "Error generating prompt" },
+      { status: 500 }
+    );
   }
 }
